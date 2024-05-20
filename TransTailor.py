@@ -41,7 +41,7 @@ def LoadModel(device):
     return model
 
 def model_finetune(device, model, train_loader, num_epochs, learningRate, momentum, checkpointEpoch):
-    checkpoint_path = 'checkpoint_epoch_{epoch}.pt'
+    checkpoint_path = 'checkpoint/checkpoint_epoch_{epoch}.pt'
 
     print("\n===Fine-tune the pre-trained model to generate W_s*===")
     optimizer = torch.optim.SGD(model.parameters(), lr=learningRate, momentum=momentum)
