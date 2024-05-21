@@ -1,8 +1,8 @@
 name: tensorml
 channels:
-  - conda-forge
   - pytorch
   - nvidia
+  - conda-forge
   - defaults
 dependencies:
   - _libgcc_mutex=0.1=main
@@ -25,6 +25,7 @@ dependencies:
   - ffmpeg=4.3=hf484d3e_0
   - filelock=3.13.1=py312h06a4308_0
   - freetype=2.12.1=h4a9f257_0
+  - gdown=5.2.0=pyhd8ed1ab_0
   - gmp=6.2.1=h295c915_3
   - gnutls=3.6.15=he1e5248_0
   - idna=3.7=py312h06a4308_0
@@ -85,6 +86,7 @@ dependencies:
   - readline=8.2=h5eee18b_0
   - requests=2.31.0=py312h06a4308_1
   - setuptools=69.5.1=py312h06a4308_0
+  - soupsieve=2.5=py312h06a4308_0
   - sqlite=3.45.3=h5eee18b_0
   - sympy=1.12=py312h06a4308_0
   - tbb=2021.8.0=hdb19cb5_0
@@ -100,4 +102,6 @@ dependencies:
   - yaml=0.2.5=h7b6447c_0
   - zlib=1.2.13=h5eee18b_1
   - zstd=1.5.5=hc292b87_2
+  - pip:
+      - beautifulsoup4==4.12.3
 prefix: /root/anaconda3/envs/tensorml
