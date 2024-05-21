@@ -146,6 +146,29 @@ def ScalingFactorsTraining(model, scaling_factors, num_epochs, learning_rate, mo
     
     return scaling_factors
 
+def ImportanceScoreInit(scaling_factors, model, train_loader, device):
+    importance_scores = {}
+    num_layers = len(model.features)
+    criterion = torch.nn.CrossEntropyLoss()
+
+    for inputs, labels in train_loader:
+        inputs, labels = inputs.to(device), labels.to(device)
+        outputs = inputs
+        for i in range(num_layers):
+            if isinstance(model.features[i], torch.nn.Conv2d):
+                outputs = model.features[i](outputs)
+                outputs = outputs*scaling_factors[i].cuda()
+            else:
+                outputs = model.features[i](outputs)
+
+        outputs = torch.flatten(outputs, 1)
+        classification_output = model.classifier(outputs)
+        loss = criterion(classification_output, labels)
+        
+    for i, scaling_factor in scaling_factors.items():
+        first_order_derivative = torch.autograd.grad(loss, scaling_factor, retain_graph=True)[0]
+        importance_scores[i] = torch.abs(first_order_derivative * scaling_factor).detach() #Freeze importance_scores[i] after calculating
+
 if __name__ == "__main__":
     print("GET DEVICE INFORMATION")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -188,6 +211,9 @@ if __name__ == "__main__":
 
     # TARGET AWARE PRUNING: Fine tune the model on target dataset (CIFAR 10)
     model = ModelFinetune(device, model, train_loader, FINETUNE_EPOCH, FINETUNE_LR, FINETUNE_LR, checkpoint_epoch)
-    
+
+    # IMPORTANCE AWARE FINETUNE
     scalingFactors = ScalingFactorsInit(model, ALPHA_CHECKPOINT)
     scalingFactors = ScalingFactorsTraining(model, scalingFactors, ALPHA_EPOCH, ALPHA_LR, ALPHA_MOMENTUM)
+
+    importanceScores = ImportanceScoreInit(scalingFactors, model, train_loader, device)
