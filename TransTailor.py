@@ -12,18 +12,22 @@ import gdown
 BATCH_SIZE = 128
 NUM_WORKER = 20
 
-FINETUNE_EPOCH = 15
+FINETUNE_EPOCH = 10
 FINETUNE_LR = 0.001
 FINETUNE_MOMENTUM = 0.9
 
+FINETUNE_PRUNING_EPOCH = 5
+
 CHECKPOINT_URL = "https://drive.google.com/file/d/1VaQ2-ZVSt2kdMDHER34ghNCEnyJ-lNXu/view?usp=drive_link"
 CHECKPOINT_DIR = "./checkpoint"
-CHECKPOINT_NAME = "checkpoint_epoch_15.pt"
+CHECKPOINT_NAME = "checkpoint_epoch_10.pt"
 
 ALPHA_CHECKPOINT = ""
 ALPHA_EPOCH = 10
 ALPHA_LR = 0.001
 ALPHA_MOMENTUM = 0.9
+
+THRESHOLD = 2
 
 ROOT_DIR = "~/TransTailor"
 
@@ -169,16 +173,52 @@ def ImportanceScoreInit(scaling_factors, model, train_loader, device):
         first_order_derivative = torch.autograd.grad(loss, scaling_factor, retain_graph=True)[0]
         importance_scores[i] = torch.abs(first_order_derivative * scaling_factor).detach() #Freeze importance_scores[i] after calculating
 
+def FindFilterToPrune(importance_scores, pruned_filters):
+    min_value = float('inf')
+    min_filter = None
+    min_layer = None
+
+    for layer_index, scores_tensor in importance_scores.items():
+        for filter_index, score in enumerate(scores_tensor[0]):
+            # Check if the filter has already been pruned
+            if (layer_index, filter_index) in pruned_filters:
+                continue
+            
+            if score < min_value:
+                min_value = score.item()
+                min_filter = filter_index
+                min_layer = layer_index
+                if min_value == 0:
+                    break
+
+    return min_layer, min_filter
+
+def CalculateAccuracy(model, test_loader):
+    model.eval()
+    total_correct = 0
+    total_samples = 0
+    with torch.no_grad():
+        for images, labels in test_loader:
+            images, labels = images.to(device), labels.to(device)
+            outputs = model(images)
+            _, predicted = torch.max(outputs.data, 1)
+            total_correct += (predicted == labels).sum().item()
+            total_samples += len(labels)
+
+    accuracy = 100 * total_correct / total_samples
+    return accuracy
+
+def CountNonZeroParameters(model):
+    non_zero_params = sum(p.nonzero().size(0) for p in model.parameters() if p.requires_grad)
+    return non_zero_params
+
 if __name__ == "__main__":
     print("GET DEVICE INFORMATION")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("DEVICE: " + str(device))
 
-    batch_size = 64
-    num_worker = 12
-
     print("LOAD DATASET: CIFAR10")
-    train_loader, test_loader = LoadData(num_worker, batch_size)
+    train_loader, test_loader = LoadData(NUM_WORKER, BATCH_SIZE)
 
     print("LOAD PRETRAINED MODEL: VGG-16 (ImageNet)")
     model = LoadModel(device)
@@ -206,14 +246,59 @@ if __name__ == "__main__":
             print("Cannot find saved model, use original pretrained model instead!")
 
     # CHECK NUMBER OF PARAMETERS
-    print("Total params: ", sum(p.numel() for p in model.parameters()))
-    print("Trainable params: ", sum(p.numel() for p in model.parameters() if p.requires_grad))
+    total_param = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    print("Total trainable params: ", sum(p.numel() for p in model.parameters()))
 
-    # TARGET AWARE PRUNING: Fine tune the model on target dataset (CIFAR 10)
-    model = ModelFinetune(device, model, train_loader, FINETUNE_EPOCH, FINETUNE_LR, FINETUNE_LR, checkpoint_epoch)
+    # FINE-TUNE MODEL ON TARGET DATASET
+    opt_sub_model = ModelFinetune(device, model, train_loader, FINETUNE_EPOCH, FINETUNE_LR, FINETUNE_MOMENTUM, checkpoint_epoch)
+    pruned_model = opt_sub_model
+    
+    opt_accuracy = CalculateAccuracy(opt_sub_model, test_loader)
+    print("Accuracy of optimal model: ", opt_accuracy)
 
-    # IMPORTANCE AWARE FINETUNE
+    # INIT SCALING FACTOR
     scalingFactors = ScalingFactorsInit(model, ALPHA_CHECKPOINT)
-    scalingFactors = ScalingFactorsTraining(model, scalingFactors, ALPHA_EPOCH, ALPHA_LR, ALPHA_MOMENTUM)
 
-    importanceScores = ImportanceScoreInit(scalingFactors, model, train_loader, device)
+    # MODEL OPTIMIZATION PROCESS
+    while(1):
+        scalingFactors = ScalingFactorsTraining(opt_sub_model, scalingFactors, ALPHA_EPOCH, ALPHA_LR, ALPHA_MOMENTUM)
+
+        importanceScores = ImportanceScoreInit(scalingFactors, model, train_loader, device)
+
+        ### PRUNING PROCESS
+        if 'pruned_filters' not in locals():
+            pruned_filters = set()
+        
+        layer_to_prune, filter_to_prune = FindFilterToPrune(importanceScores, pruned_filters)
+
+        pruned_layer = pruned_model.features[layer_to_prune]
+        pruned_filter = pruned_layer.weight.data[filter_to_prune]
+
+        with torch.no_grad():
+            pruned_layer.weight.data[filter_to_prune] = 0
+            pruned_layer.bias.data[filter_to_prune] = 0
+
+        # After pruning, you can update the pruned_filters set
+        pruned_filters.add((layer_to_prune, filter_to_prune))
+
+        pruned_params = total_param - CountNonZeroParameters(pruned_model)
+        print("Pruned params: {:,}".format(pruned_params))
+        print("Pruned ratio: ", 100*pruned_params/total_param, "%")
+
+        ### END OF PRUNING PROCESS
+
+        # FINE-TUNE AFTER PRUNING
+        ModelFinetune(device, pruned_model, train_loader, FINETUNE_PRUNING_EPOCH, FINETUNE_LR, FINETUNE_MOMENTUM, 0)
+
+        # CALCULATE ACCURACY
+        pruned_accuracy = CalculateAccuracy(pruned_model, test_loader)
+        print("Accuracy of pruned model: ", pruned_accuracy)
+
+        if abs(opt_accuracy - pruned_accuracy) > THRESHOLD:
+            print("Optimization done!")
+            torch.save(opt_sub_model.state_dict(), 'optimal_model.pt')
+            break
+        else:
+            print("Update optimal model")
+            opt_sub_model = pruned_model
+            opt_accuracy = pruned_accuracy
