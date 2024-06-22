@@ -9,25 +9,25 @@ import gdown
 
 ##################################
 # DEFINE CONSTANT
-BATCH_SIZE = 128
+BATCH_SIZE = 64
 NUM_WORKER = 20
 
-FINETUNE_EPOCH = 10
-FINETUNE_LR = 0.001
+FINETUNE_EPOCH = 40
+FINETUNE_LR = 0.005
 FINETUNE_MOMENTUM = 0.9
 
-FINETUNE_PRUNING_EPOCH = 5
+FINETUNE_PRUNING_EPOCH = 10
 
 CHECKPOINT_URL = "https://drive.google.com/file/d/1VaQ2-ZVSt2kdMDHER34ghNCEnyJ-lNXu/view?usp=drive_link"
-CHECKPOINT_DIR = "./checkpoint"
-CHECKPOINT_NAME = "checkpoint_epoch_10.pt"
+TARGET_AWARE_CHECKPOINT = "./checkpoint/Target_aware"
+CHECKPOINT_NAME = "ta_epoch_40.pt"
 
 ALPHA_CHECKPOINT = ""
 ALPHA_EPOCH = 10
-ALPHA_LR = 0.001
+ALPHA_LR = 0.005
 ALPHA_MOMENTUM = 0.9
 
-THRESHOLD = 2
+THRESHOLD = 5
 
 ROOT_DIR = "~/TransTailor"
 
@@ -67,8 +67,11 @@ def LoadModel(device):
 
     return model
 
-def ModelFinetune(device, model, train_loader, num_epochs, learningRate, momentum, checkpointEpoch):
-    checkpoint_path = 'checkpoint/checkpoint_epoch_{epoch}.pt'
+def ModelFinetune(device, model, train_loader, num_epochs, learningRate, momentum, checkpointEpoch, mode):
+    if mode == "Target_aware":
+        checkpoint_path = 'checkpoint/Target_aware/ta_epoch_{epoch}.pt'
+    elif mode == "Importance_aware":
+        checkpoint_path = 'checkpoint/Importance_aware/ia_epoch_{epoch}.pt'
 
     print("\n===Fine-tune the pre-trained model to generate W_s*===")
     optimizer = torch.optim.SGD(model.parameters(), lr=learningRate, momentum=momentum)
@@ -125,7 +128,7 @@ def ScalingFactorsTraining(model, scaling_factors, num_epochs, learning_rate, mo
     optimizer_alpha = torch.optim.SGD(params_to_optimize, lr=learning_rate, momentum=momentum)
 
     for epoch in range(num_epochs):
-        print("Epoch " + str(epoch) + "/" + str(num_epochs))
+        print("Epoch " + str(epoch+1) + "/" + str(num_epochs))
         iter_count = 0
 
         for inputs, labels in tqdm(train_loader):
@@ -173,6 +176,8 @@ def ImportanceScoreInit(scaling_factors, model, train_loader, device):
         first_order_derivative = torch.autograd.grad(loss, scaling_factor, retain_graph=True)[0]
         importance_scores[i] = torch.abs(first_order_derivative * scaling_factor).detach() #Freeze importance_scores[i] after calculating
 
+    return importance_scores
+
 def FindFilterToPrune(importance_scores, pruned_filters):
     min_value = float('inf')
     min_filter = None
@@ -209,7 +214,7 @@ def CalculateAccuracy(model, test_loader):
     return accuracy
 
 def CountNonZeroParameters(model):
-    non_zero_params = sum(p.nonzero().size(0) for p in model.parameters() if p.requires_grad)
+    non_zero_params = sum(p.nonzero().size(0) for p in model.parameters())
     return non_zero_params
 
 if __name__ == "__main__":
@@ -232,7 +237,7 @@ if __name__ == "__main__":
     checkpoint_epoch = 0
     load_saved_model = input("Do you want to load model from checkpoint? [y/n]: ")
     if load_saved_model == "y":
-        checkpoint_path = os.path.join(CHECKPOINT_DIR, CHECKPOINT_NAME)
+        checkpoint_path = os.path.join(TARGET_AWARE_CHECKPOINT, CHECKPOINT_NAME)
         if os.path.isfile(checkpoint_path):
             # LOAD MODEL FROM SAVE'S PATH
             checkpoint = torch.load(checkpoint_path)
@@ -247,14 +252,16 @@ if __name__ == "__main__":
 
     # CHECK NUMBER OF PARAMETERS
     total_param = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    print("Total trainable params: ", sum(p.numel() for p in model.parameters()))
+    with open('log.txt', 'a') as f:
+        print("Total trainable params: {:,}".format(total_param) , file=f)
 
     # FINE-TUNE MODEL ON TARGET DATASET
-    opt_sub_model = ModelFinetune(device, model, train_loader, FINETUNE_EPOCH, FINETUNE_LR, FINETUNE_MOMENTUM, checkpoint_epoch)
+    opt_sub_model = ModelFinetune(device, model, train_loader, FINETUNE_EPOCH, FINETUNE_LR, FINETUNE_MOMENTUM, checkpoint_epoch, "Target_aware")
     pruned_model = opt_sub_model
     
     opt_accuracy = CalculateAccuracy(opt_sub_model, test_loader)
-    print("Accuracy of optimal model: ", opt_accuracy)
+    with open('log.txt', 'a') as f:
+        print("Accuracy of finetuned model: ", opt_accuracy, file=f)
 
     # INIT SCALING FACTOR
     scalingFactors = ScalingFactorsInit(model, ALPHA_CHECKPOINT)
@@ -263,6 +270,7 @@ if __name__ == "__main__":
     while(1):
         scalingFactors = ScalingFactorsTraining(opt_sub_model, scalingFactors, ALPHA_EPOCH, ALPHA_LR, ALPHA_MOMENTUM)
 
+        print("Generating importance score")
         importanceScores = ImportanceScoreInit(scalingFactors, model, train_loader, device)
 
         ### PRUNING PROCESS
@@ -270,6 +278,9 @@ if __name__ == "__main__":
             pruned_filters = set()
         
         layer_to_prune, filter_to_prune = FindFilterToPrune(importanceScores, pruned_filters)
+
+        with open('log.txt', 'a') as f:
+            print("===Ready to prune ", filter_to_prune, "th filter in ", layer_to_prune, "th layer===", file=f)
 
         pruned_layer = pruned_model.features[layer_to_prune]
         pruned_filter = pruned_layer.weight.data[filter_to_prune]
@@ -282,21 +293,25 @@ if __name__ == "__main__":
         pruned_filters.add((layer_to_prune, filter_to_prune))
 
         pruned_params = total_param - CountNonZeroParameters(pruned_model)
-        print("Pruned params: {:,}".format(pruned_params))
-        print("Pruned ratio: ", 100*pruned_params/total_param, "%")
+        with open('log.txt', 'a') as f:
+            print("Pruned params: {:,}".format(pruned_params), file=f)
+            print("Pruned ratio: ", 100*pruned_params/total_param, "%", file=f)
 
         ### END OF PRUNING PROCESS
 
         # FINE-TUNE AFTER PRUNING
-        ModelFinetune(device, pruned_model, train_loader, FINETUNE_PRUNING_EPOCH, FINETUNE_LR, FINETUNE_MOMENTUM, 0)
+        for param in pruned_model.parameters():
+            param.requires_grad = True
+        ModelFinetune(device, pruned_model, train_loader, FINETUNE_PRUNING_EPOCH, FINETUNE_LR, FINETUNE_MOMENTUM, 0, "Importance_aware")
 
         # CALCULATE ACCURACY
         pruned_accuracy = CalculateAccuracy(pruned_model, test_loader)
-        print("Accuracy of pruned model: ", pruned_accuracy)
+        with open('log.txt', 'a') as f:
+            print("Accuracy of pruned model: ", pruned_accuracy, file=f)
 
         if abs(opt_accuracy - pruned_accuracy) > THRESHOLD:
             print("Optimization done!")
-            torch.save(opt_sub_model.state_dict(), 'optimal_model.pt')
+            torch.save(opt_sub_model.state_dict(), 'checkpoint/optimal_model.pt')
             break
         else:
             print("Update optimal model")
