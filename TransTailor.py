@@ -12,18 +12,18 @@ import gdown
 BATCH_SIZE = 64
 NUM_WORKER = 20
 
-FINETUNE_EPOCH = 40
+FINETUNE_EPOCH = 1
 FINETUNE_LR = 0.005
 FINETUNE_MOMENTUM = 0.9
 
-FINETUNE_PRUNING_EPOCH = 10
+FINETUNE_PRUNING_EPOCH = 1
 
 CHECKPOINT_URL = "https://drive.google.com/file/d/1VaQ2-ZVSt2kdMDHER34ghNCEnyJ-lNXu/view?usp=drive_link"
 TARGET_AWARE_CHECKPOINT = "./checkpoint/Target_aware"
-CHECKPOINT_NAME = "ta_epoch_40.pt"
+CHECKPOINT_NAME = "ta_epoch_1.pt"
 
-ALPHA_CHECKPOINT = ""
-ALPHA_EPOCH = 10
+ALPHA_CHECKPOINT = "ia_epoch_1.pt"
+ALPHA_EPOCH = 1
 ALPHA_LR = 0.005
 ALPHA_MOMENTUM = 0.9
 
@@ -302,7 +302,7 @@ if __name__ == "__main__":
         # FINE-TUNE AFTER PRUNING
         for param in pruned_model.parameters():
             param.requires_grad = True
-        ModelFinetune(device, pruned_model, train_loader, FINETUNE_PRUNING_EPOCH, FINETUNE_LR, FINETUNE_MOMENTUM, 0, "Importance_aware")
+        ModelFinetune(device, pruned_model, train_loader, FINETUNE_PRUNING_EPOCH, FINETUNE_LR, FINETUNE_MOMENTUM, 0, "Target_aware")
 
         # CALCULATE ACCURACY
         pruned_accuracy = CalculateAccuracy(pruned_model, test_loader)
