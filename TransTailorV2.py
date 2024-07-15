@@ -105,9 +105,9 @@ if __name__ == "__main__":
         pruner.Finetune(40, TA_LR, TA_MOMENTUM, 0)
         opt_accuracy = CalculateAccuracy(pruner.model, test_loader)
         print("Accuracy of finetuned model: ", opt_accuracy)
-        
+
         pruner.InitScalingFactors()
-        pruner.SaveState(SAVED_PATH.format(0))
+        pruner.SaveState(SAVED_PATH.format(pruned_count = 0))
 
     # START PRUNING PROCESS
     while True:
@@ -115,11 +115,14 @@ if __name__ == "__main__":
         pruner.GenerateImportanceScores()
         layer_to_prune, filter_to_prune = pruner.FindFilterToPrune()
         pruner.Prune(layer_to_prune, filter_to_prune)
+        print("===Prune ", filter_to_prune, "th filter in ", layer_to_prune, "th layer===")
 
         pruned_count = pruner.pruned_filters
         if len(pruned_count) % 10 == 0:
-            pruner.SaveState(SAVED_PATH.format(pruned_count))
-        
+            pruner.SaveState(SAVED_PATH.format(pruned_count = pruned_count))
+
+        for param in pruner.model.parameters():
+            param.requires_grad = True
         pruner.Finetune(TA_EPOCH, TA_LR, TA_MOMENTUM, 0)
 
         pruned_accuracy = CalculateAccuracy(pruner.model, test_loader)
