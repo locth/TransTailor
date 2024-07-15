@@ -97,17 +97,18 @@ if __name__ == "__main__":
     model = LoadModel(device)
 
     # INIT PRUNING SCHEME
-    pruner = Pruner(model, train_loader, device, amount=0.1)
+    pruner = Pruner(model, train_loader, device, amount=10)
     if os.path.isfile(CHECKPOINT_PATH):
         print("Load model and pruning info from checkpoint...")
         pruner.LoadState(CHECKPOINT_PATH)
     else:
         pruner.Finetune(40, TA_LR, TA_MOMENTUM, 0)
-        opt_accuracy = CalculateAccuracy(pruner.model, test_loader)
-        print("Accuracy of finetuned model: ", opt_accuracy)
 
         pruner.InitScalingFactors()
         pruner.SaveState(SAVED_PATH.format(pruned_count = 0))
+
+    opt_accuracy = CalculateAccuracy(pruner.model, test_loader)
+    print("Accuracy of finetuned model: ", opt_accuracy)
 
     # START PRUNING PROCESS
     while True:
