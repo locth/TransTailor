@@ -67,7 +67,7 @@ def CalculateAccuracy(model, test_loader):
 def LoadArguments():
     parser = argparse.ArgumentParser(description="Config cli params")
     parser.add_argument("-r","--root", help="Root directory")
-    parser.add_argument("-c","--checkpoint", default=None, help="Checkpoint path")
+    parser.add_argument("-c","--checkpoint", default="", help="Checkpoint path")
     parser.add_argument("-n", "--numworker", default=1, help="Number of worker")
     parser.add_argument("-b", "--batchsize", default=32, help="Batch size")
 
@@ -95,7 +95,6 @@ if __name__ == "__main__":
 
     print("LOAD PRETRAINED MODEL: VGG-16 (ImageNet)")
     model = LoadModel(device)
-    opt_accuracy = CalculateAccuracy(model, test_loader)
 
     # INIT PRUNING SCHEME
     pruner = Pruner(model, train_loader, device, amount=0.1)
@@ -104,6 +103,9 @@ if __name__ == "__main__":
         pruner.LoadState(CHECKPOINT_PATH)
     else:
         pruner.Finetune(40, TA_LR, TA_MOMENTUM, 0)
+        opt_accuracy = CalculateAccuracy(pruner.model, test_loader)
+        print("Accuracy of finetuned model: ", opt_accuracy)
+        
         pruner.InitScalingFactors()
         pruner.SaveState(SAVED_PATH.format(0))
 

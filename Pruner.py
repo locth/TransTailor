@@ -121,7 +121,7 @@ class Pruner:
         self.pruned_filters.add((layer_to_prune, filter_to_prune))
 
     def Finetune(self, num_epochs, learning_rate, momentum, checkpoint_epoch):
-        print("\n===Fine-tune the pre-trained model to generate W_s*===")
+        print("\n===Fine-tune the model to achieve W_s*===")
         optimizer = torch.optim.SGD(self.model.parameters(), lr=learning_rate, momentum=momentum)
         criterion = torch.nn.CrossEntropyLoss()
 
