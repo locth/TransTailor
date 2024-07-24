@@ -49,21 +49,6 @@ def LoadData(numWorker, batchSize):
 
     return train_loader, test_loader
 
-def CalculateAccuracy(model, test_loader):
-    model.eval()
-    total_correct = 0
-    total_samples = 0
-    with torch.no_grad():
-        for images, labels in test_loader:
-            images, labels = images.to(device), labels.to(device)
-            outputs = model(images)
-            _, predicted = torch.max(outputs.data, 1)
-            total_correct += (predicted == labels).sum().item()
-            total_samples += len(labels)
-
-    accuracy = 100 * total_correct / total_samples
-    return accuracy
-
 def LoadArguments():
     parser = argparse.ArgumentParser(description="Config cli params")
     parser.add_argument("-r","--root", help="Root directory")
@@ -78,6 +63,21 @@ def LoadArguments():
     BATCH_SIZE = int(args.batchsize)
 
     return ROOT_DIR, CHECKPOINT_PATH, NUM_WORKER, BATCH_SIZE
+
+def CalculateAccuracy(model, test_loader):
+    model.eval()
+    total_correct = 0
+    total_samples = 0
+    with torch.no_grad():
+        for images, labels in test_loader:
+            images, labels = images.to(device), labels.to(device)
+            outputs = model(images)
+            _, predicted = torch.max(outputs.data, 1)
+            total_correct += (predicted == labels).sum().item()
+            total_samples += len(labels)
+
+    accuracy = 100 * total_correct / total_samples
+    return accuracy
 
 if __name__ == "__main__":
     # LOAD ARGUMENTS

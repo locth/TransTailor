@@ -1,12 +1,9 @@
 import torch
 import torchvision
 import torchvision.transforms as transforms
-from tqdm import tqdm
 import itertools
 import pickle
 import os
-import gdown
-import argparse
 
 class Pruner:
     def __init__(self, model, train_loader, device, amount=0.2):
@@ -47,7 +44,7 @@ class Pruner:
             print("Epoch " + str(epoch + 1) + "/" + str(num_epochs))
             iter_count = 0
 
-            for inputs, labels in tqdm(self.train_loader):
+            for inputs, labels in self.train_loader:
                 inputs, labels = inputs.to(self.device), labels.to(self.device)
                 batch_size = inputs.shape[0]
                 optimizer_alpha.zero_grad()
@@ -129,7 +126,7 @@ class Pruner:
 
         for epoch in range(epoch, num_epochs):
             print("Epoch " + str(epoch + 1) + "/" + str(num_epochs))
-            for inputs, labels in tqdm(self.train_loader):
+            for inputs, labels in self.train_loader:
                 inputs, labels = inputs.to(self.device), labels.to(self.device)
                 optimizer.zero_grad()
                 outputs = self.model(inputs)
