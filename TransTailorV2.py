@@ -118,8 +118,8 @@ if __name__ == "__main__":
         pruner.Prune(layer_to_prune, filter_to_prune)
         print("===Prune ", filter_to_prune, "th filter in ", layer_to_prune, "th layer===")
 
-        pruned_count = pruner.pruned_filters
-        if len(pruned_count) % 10 == 0:
+        pruned_count = len(pruner.pruned_filters)
+        if pruned_count % 10 == 0:
             pruner.SaveState(SAVED_PATH.format(pruned_count = pruned_count))
 
         for param in pruner.model.parameters():
