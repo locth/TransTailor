@@ -4,6 +4,10 @@ import torchvision.transforms as transforms
 from Pruner import Pruner
 import argparse
 import os
+import logging
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 TA_EPOCH = 1
 TA_LR = 0.005
@@ -81,26 +85,26 @@ def CalculateAccuracy(model, test_loader):
 
 if __name__ == "__main__":
     # LOAD ARGUMENTS
-    print("START MAIN PROGRAM!")
+    logger.info("START MAIN PROGRAM!")
     ROOT_DIR, CHECKPOINT_PATH, NUM_WORKER, BATCH_SIZE = LoadArguments()
     RESULT_PATH = os.path.join(ROOT_DIR, "checkpoint/optimal_model.pt")
     SAVED_PATH = os.path.join(ROOT_DIR, "checkpoint/pruner/checkpoint_{pruned_count}.pkl")
 
     # LOAD MODEL
-    print("GET DEVICE INFORMATION")
+    logger.info("GET DEVICE INFORMATION")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print("DEVICE: " + str(device))
+    logger.info("DEVICE: " + str(device))
 
-    print("LOAD DATASET: CIFAR10")
+    logger.info("LOAD DATASET: CIFAR10")
     train_loader, test_loader = LoadData(NUM_WORKER, BATCH_SIZE)
 
-    print("LOAD PRETRAINED MODEL: VGG-16 (ImageNet)")
+    logger.info("LOAD PRETRAINED MODEL: VGG-16 (ImageNet)")
     model = LoadModel(device)
 
     # INIT PRUNING SCHEME
     pruner = Pruner(model, train_loader, device, amount=10)
     if os.path.isfile(CHECKPOINT_PATH):
-        print("Load model and pruning info from checkpoint...")
+        logger.info("Load model and pruning info from checkpoint...")
         pruner.LoadState(CHECKPOINT_PATH)
     else:
         pruner.Finetune(40, TA_LR, TA_MOMENTUM, 0)
@@ -109,7 +113,7 @@ if __name__ == "__main__":
         pruner.SaveState(SAVED_PATH.format(pruned_count = 0))
 
     opt_accuracy = CalculateAccuracy(pruner.model, test_loader)
-    print("Accuracy of finetuned model: ", opt_accuracy)
+    logger.info(print("Accuracy of finetuned model: ", opt_accuracy))
 
     # START PRUNING PROCESS
     while True:
@@ -117,7 +121,7 @@ if __name__ == "__main__":
         pruner.GenerateImportanceScores()
         layer_to_prune, filter_to_prune = pruner.FindFilterToPrune()
         pruner.Prune(layer_to_prune, filter_to_prune)
-        print("===Prune ", filter_to_prune, "th filter in ", layer_to_prune, "th layer===")
+        logger.info(print("===Prune ", filter_to_prune, "th filter in ", layer_to_prune, "th layer==="))
 
         pruned_count = len(pruner.pruned_filters)
         if pruned_count % 10 == 0:
@@ -128,12 +132,12 @@ if __name__ == "__main__":
         pruner.Finetune(TA_EPOCH, TA_LR, TA_MOMENTUM, 0)
 
         pruned_accuracy = CalculateAccuracy(pruner.model, test_loader)
-        print("Accuracy of pruned model: ", pruned_accuracy)
+        logger.info(print("Accuracy of pruned model: ", pruned_accuracy))
 
         if abs(opt_accuracy - pruned_accuracy) > pruner.amount:
-            print("Optimization done!")
+            logger.info("Optimization done!")
             torch.save(pruner.model.state_dict(), RESULT_PATH)
             break
         else:
-            print("Update optimal model")
+            logger.info("Update optimal model")
 

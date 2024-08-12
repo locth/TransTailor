@@ -4,6 +4,10 @@ import torchvision.transforms as transforms
 import itertools
 import pickle
 import os
+import logging
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 class Pruner:
     def __init__(self, model, train_loader, device, amount=0.2):
@@ -16,7 +20,7 @@ class Pruner:
         self.pruned_filters = set()
 
     def InitScalingFactors(self):
-        print("Init alpha from scratch!")
+        logger.info("Init alpha from scratch!")
         num_layers = len(self.model.features)
         self.scaling_factors = {}
 
@@ -35,13 +39,13 @@ class Pruner:
         criterion = torch.nn.CrossEntropyLoss()
         num_layers = len(self.model.features)
 
-        print("\n===Train the factors alpha by optimizing the loss function===")
+        logger.info("\n===Train the factors alpha by optimizing the loss function===")
 
         params_to_optimize = itertools.chain(self.scaling_factors[sf] for sf in self.scaling_factors.keys())
         optimizer_alpha = torch.optim.SGD(params_to_optimize, lr=learning_rate, momentum=momentum)
 
         for epoch in range(num_epochs):
-            print("Epoch " + str(epoch + 1) + "/" + str(num_epochs))
+            logger.info("Epoch " + str(epoch + 1) + "/" + str(num_epochs))
             iter_count = 0
 
             for inputs, labels in self.train_loader:
@@ -118,14 +122,14 @@ class Pruner:
         self.pruned_filters.add((layer_to_prune, filter_to_prune))
 
     def Finetune(self, num_epochs, learning_rate, momentum, checkpoint_epoch):
-        print("\n===Fine-tune the model to achieve W_s*===")
+        logger.info("\n===Fine-tune the model to achieve W_s*===")
         optimizer = torch.optim.SGD(self.model.parameters(), lr=learning_rate, momentum=momentum)
         criterion = torch.nn.CrossEntropyLoss()
 
         epoch = checkpoint_epoch
 
         for epoch in range(epoch, num_epochs):
-            print("Epoch " + str(epoch + 1) + "/" + str(num_epochs))
+            logger.info("Epoch " + str(epoch + 1) + "/" + str(num_epochs))
             for inputs, labels in self.train_loader:
                 inputs, labels = inputs.to(self.device), labels.to(self.device)
                 optimizer.zero_grad()
