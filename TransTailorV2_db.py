@@ -113,7 +113,7 @@ if __name__ == "__main__":
         pruner.SaveState(SAVED_PATH.format(pruned_count = 0))
 
     opt_accuracy = CalculateAccuracy(pruner.model, test_loader)
-    logger.info(print("Accuracy of finetuned model: ", opt_accuracy))
+    print("Accuracy of finetuned model: ", opt_accuracy, flush=True)
 
     # START PRUNING PROCESS
     while True:
@@ -121,7 +121,7 @@ if __name__ == "__main__":
         pruner.GenerateImportanceScores()
         layer_to_prune, filter_to_prune = pruner.FindFilterToPrune()
         pruner.Prune(layer_to_prune, filter_to_prune)
-        logger.info(print("===Prune ", filter_to_prune, "th filter in ", layer_to_prune, "th layer==="))
+        print("===Prune ", filter_to_prune, "th filter in ", layer_to_prune, "th layer===", flush=True)
 
         pruned_count = len(pruner.pruned_filters)
         if pruned_count % 10 == 0:
@@ -132,12 +132,12 @@ if __name__ == "__main__":
         pruner.Finetune(TA_EPOCH, TA_LR, TA_MOMENTUM, 0)
 
         pruned_accuracy = CalculateAccuracy(pruner.model, test_loader)
-        logger.info(print("Accuracy of pruned model: ", pruned_accuracy))
+        print("Accuracy of pruned model: ", pruned_accuracy, flush=True)
 
         if abs(opt_accuracy - pruned_accuracy) > pruner.amount:
-            logger.info("Optimization done!")
+            print("Optimization done!", flush=True)
             torch.save(pruner.model.state_dict(), RESULT_PATH)
             break
         else:
-            logger.info("Update optimal model")
+            print("Update optimal model", flush=True)
 
