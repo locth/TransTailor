@@ -226,8 +226,8 @@ class Pruner:
                 new_scaling_factor = new_scaling_factor.view(1, new_scaling_factor.shape[0], 1, 1)
                 # Set requires_grad=True for the new scaling factor
                 # new_scaling_factor.requires_grad_(True)
+                new_scaling_factor = new_scaling_factor.detach().requires_grad_(True)
                 self.scaling_factors[layer_index] = new_scaling_factor
-                self.scaling_factors.requires_grad_(True)
 
     def PruneImportanceScore(self, filters_to_prune):
         print("===Prune Importance Score===\n")
