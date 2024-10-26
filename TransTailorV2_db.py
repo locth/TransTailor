@@ -5,6 +5,7 @@ from Pruner import Pruner
 import argparse
 import os
 import logging
+import time
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -83,6 +84,11 @@ def CalculateAccuracy(model, test_loader):
     accuracy = 100 * total_correct / total_samples
     return accuracy
 
+def TimeLog():
+    curr_time = time.strftime("%H:%M:%S", time.localtime())
+    print("Time log:", curr_time)
+
+
 if __name__ == "__main__":
     # LOAD ARGUMENTS
     logger.info("START MAIN PROGRAM!")
@@ -117,20 +123,38 @@ if __name__ == "__main__":
 
     # START PRUNING PROCESS
     while True:
+        TimeLog()
         pruner.TrainScalingFactors(ROOT_DIR, 1, IA_LR, IA_MOMENTUM)
+        TimeLog()
         pruner.GenerateImportanceScores()
-        layer_to_prune, filter_to_prune = pruner.FindFilterToPrune()
-        pruner.Prune(layer_to_prune, filter_to_prune)
-        print("===Prune ", filter_to_prune, "th filter in ", layer_to_prune, "th layer===", flush=True)
+        # layer_to_prune, filter_to_prune = pruner.FindFilterToPrune()
+        filters_to_prune = pruner.FindFiltersToPrune()
+        # pruner.Prune(layer_to_prune, filter_to_prune)
+        TimeLog()
+        pruner.PruneAndRestructure(filters_to_prune)
+        TimeLog()
+        pruner.ModifyClassifier()
+        TimeLog()
+        pruner.PruneScalingFactors(filters_to_prune)
+        TimeLog()
+        pruner.PruneImportanceScore(filters_to_prune)
+        
+        sum_filters = 0 
+        for layer in filters_to_prune:
+            number_of_filters = len(filters_to_prune[layer])
+            sum_filters += number_of_filters
+        print("===Number of pruned filters is: ", sum_filters)
 
-        pruned_count = len(pruner.pruned_filters)
-        if pruned_count % 10 == 0:
-            pruner.SaveState(SAVED_PATH.format(pruned_count = pruned_count))
+        # pruned_count = len(pruner.pruned_filters)
+        # if pruned_count % 10 == 0:
+        #     pruner.SaveState(SAVED_PATH.format(pruned_count = pruned_count))
 
         for param in pruner.model.parameters():
             param.requires_grad = True
-        pruner.Finetune(TA_EPOCH, TA_LR, TA_MOMENTUM, 0)
 
+        TimeLog()
+        pruner.Finetune(TA_EPOCH, TA_LR, TA_MOMENTUM, 0)
+        TimeLog()
         pruned_accuracy = CalculateAccuracy(pruner.model, test_loader)
         print("Accuracy of pruned model: ", pruned_accuracy, flush=True)
 
@@ -140,4 +164,3 @@ if __name__ == "__main__":
             break
         else:
             print("Update optimal model", flush=True)
-
