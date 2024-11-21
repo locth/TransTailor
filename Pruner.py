@@ -96,14 +96,12 @@ class Pruner:
             classification_output = self.model.classifier(outputs)
             loss = criterion(classification_output, labels)
 
-        for i, scaling_factor in self.scaling_factors.items():
-            first_order_derivative = torch.autograd.grad(loss, scaling_factor, retain_graph=True)[0]
-            self.importance_scores[i] = torch.abs(first_order_derivative * scaling_factor).detach()
 
         for i in range(num_layers):
             if isinstance(self.model.features[i], torch.nn.Conv2d):
-                first_order_derivative = torch.autograd.grad(loss, scaling_factor, retain_graph=True)[0]
-                self.importance_scores[i] = torch.abs(first_order_derivative * scaling_factor).detach()
+                for i, scaling_factor in self.scaling_factors.items():
+                    first_order_derivative = torch.autograd.grad(loss, scaling_factor, retain_graph=True)[0]
+                    self.importance_scores[i] = torch.abs(first_order_derivative * scaling_factor).detach()
             else:
                 self.importance_scores[i] = torch.ones((1, 1)).to(self.device)
 
