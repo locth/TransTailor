@@ -1,0 +1,343 @@
+Files already downloaded and verified
+Files already downloaded and verified
+Accuracy of finetuned model: 93.92%
+Time log: 11:17:39
+Time log: 11:20:53
+===Generate importance score===
+Time log: 11:22:46
+Total filters: 4242
+Time log: 11:22:46
+Time log: 11:22:55
+torch.Size([32, 504, 7, 7])
+Time log: 11:22:56
+Time log: 11:22:56
+Time log: 11:22:56
+Epoch [1/1], Loss: 0.2852
+===Number of pruned filters is:  424
+Time log: 11:25:08
+
+===Fine-tune the model to achieve W_s*===
+Epoch 1/1
+Time log: 11:26:25
+Accuracy of pruned model: 91.24%
+Update optimal model
+Time log: 11:26:46
+Time log: 11:29:54
+===Generate importance score===
+Time log: 11:31:39
+Total filters: 3818
+Time log: 11:31:39
+Time log: 11:31:43
+torch.Size([32, 228, 7, 7])
+Time log: 11:31:44
+Time log: 11:31:44
+Time log: 11:31:44
+Epoch [1/1], Loss: 0.2166
+===Number of pruned filters is:  381
+Time log: 11:34:17
+
+===Fine-tune the model to achieve W_s*===
+Epoch 1/1
+Time log: 11:35:47
+Accuracy of pruned model: 90.00%
+Update optimal model
+Time log: 11:36:08
+Time log: 11:39:17
+===Generate importance score===
+Time log: 11:40:50
+Total filters: 3437
+Time log: 11:40:50
+Time log: 11:40:55
+torch.Size([32, 200, 7, 7])
+Time log: 11:40:56
+Time log: 11:40:56
+Time log: 11:40:56
+Epoch [1/1], Loss: 0.2257
+===Number of pruned filters is:  343
+Time log: 11:44:22
+
+===Fine-tune the model to achieve W_s*===
+Epoch 1/1
+Time log: 11:46:40
+Accuracy of pruned model: 89.38%
+Update optimal model
+Time log: 11:47:01
+Time log: 11:48:59
+===Generate importance score===
+Time log: 11:50:05
+Total filters: 3094
+Time log: 11:50:05
+Time log: 11:50:09
+torch.Size([32, 179, 7, 7])
+Time log: 11:50:09
+Time log: 11:50:09
+Time log: 11:50:09
+Epoch [1/1], Loss: 0.2681
+===Number of pruned filters is:  309
+Time log: 11:53:25
+
+===Fine-tune the model to achieve W_s*===
+Epoch 1/1
+Time log: 11:55:34
+Accuracy of pruned model: 89.85%
+Update optimal model
+Time log: 11:55:54
+Time log: 11:57:44
+===Generate importance score===
+Time log: 11:58:49
+Total filters: 2785
+Time log: 11:58:49
+Time log: 11:58:53
+torch.Size([32, 162, 7, 7])
+Time log: 11:58:53
+Time log: 11:58:53
+Time log: 11:58:53
+Epoch [1/1], Loss: 0.2998
+===Number of pruned filters is:  278
+Time log: 12:01:52
+
+===Fine-tune the model to achieve W_s*===
+Epoch 1/1
+Time log: 12:03:45
+Accuracy of pruned model: 88.71%
+Update optimal model
+Time log: 12:04:05
+Time log: 12:05:45
+===Generate importance score===
+Time log: 12:06:49
+Total filters: 2507
+Time log: 12:06:49
+Time log: 12:06:52
+torch.Size([32, 146, 7, 7])
+Time log: 12:06:52
+Time log: 12:06:52
+Time log: 12:06:52
+Epoch [1/1], Loss: 0.3199
+===Number of pruned filters is:  250
+Time log: 12:09:44
+
+===Fine-tune the model to achieve W_s*===
+Epoch 1/1
+Time log: 12:11:27
+Accuracy of pruned model: 89.59%
+Update optimal model
+Time log: 12:11:46
+Time log: 12:13:18
+===Generate importance score===
+Time log: 12:14:22
+Total filters: 2257
+Time log: 12:14:22
+Time log: 12:14:24
+torch.Size([32, 127, 7, 7])
+Time log: 12:14:24
+Time log: 12:14:24
+Time log: 12:14:24
+Epoch [1/1], Loss: 0.3594
+===Number of pruned filters is:  225
+Time log: 12:16:55
+
+===Fine-tune the model to achieve W_s*===
+Epoch 1/1
+Time log: 12:18:25
+Accuracy of pruned model: 88.89%
+Update optimal model
+Time log: 12:18:43
+Time log: 12:20:09
+===Generate importance score===
+Time log: 12:21:11
+Total filters: 2032
+Time log: 12:21:11
+Time log: 12:21:13
+torch.Size([32, 108, 7, 7])
+Time log: 12:21:13
+Time log: 12:21:13
+Time log: 12:21:13
+Epoch [1/1], Loss: 0.3640
+===Number of pruned filters is:  203
+Time log: 12:23:47
+
+===Fine-tune the model to achieve W_s*===
+Epoch 1/1
+Time log: 12:25:16
+Accuracy of pruned model: 88.93%
+Update optimal model
+Time log: 12:25:34
+Time log: 12:26:53
+===Generate importance score===
+Time log: 12:27:56
+Total filters: 1829
+Time log: 12:27:56
+Time log: 12:27:57
+torch.Size([32, 99, 7, 7])
+Time log: 12:27:57
+Time log: 12:27:57
+Time log: 12:27:57
+Epoch [1/1], Loss: 0.4345
+===Number of pruned filters is:  182
+Time log: 12:30:17
+
+===Fine-tune the model to achieve W_s*===
+Epoch 1/1
+Time log: 12:31:38
+Accuracy of pruned model: 86.77%
+Update optimal model
+Time log: 12:31:55
+Time log: 12:33:12
+===Generate importance score===
+Time log: 12:34:17
+Total filters: 1647
+Time log: 12:34:17
+Time log: 12:34:18
+torch.Size([32, 88, 7, 7])
+Time log: 12:34:18
+Time log: 12:34:18
+Time log: 12:34:18
+Epoch [1/1], Loss: 0.4841
+===Number of pruned filters is:  164
+Time log: 12:36:36
+
+===Fine-tune the model to achieve W_s*===
+Epoch 1/1
+Time log: 12:37:55
+Accuracy of pruned model: 86.13%
+Update optimal model
+Time log: 12:38:11
+Time log: 12:39:27
+===Generate importance score===
+Time log: 12:40:31
+Total filters: 1483
+Time log: 12:40:31
+Time log: 12:40:31
+torch.Size([32, 79, 7, 7])
+Time log: 12:40:32
+Time log: 12:40:32
+Time log: 12:40:32
+Epoch [1/1], Loss: 0.5230
+===Number of pruned filters is:  148
+Time log: 12:42:33
+
+===Fine-tune the model to achieve W_s*===
+Epoch 1/1
+Time log: 12:43:47
+Accuracy of pruned model: 87.15%
+Update optimal model
+Time log: 12:44:02
+Time log: 12:45:15
+===Generate importance score===
+Time log: 12:46:18
+Total filters: 1335
+Time log: 12:46:18
+Time log: 12:46:19
+torch.Size([32, 71, 7, 7])
+Time log: 12:46:19
+Time log: 12:46:19
+Time log: 12:46:19
+Epoch [1/1], Loss: 0.5300
+===Number of pruned filters is:  133
+Time log: 12:48:12
+
+===Fine-tune the model to achieve W_s*===
+Epoch 1/1
+Time log: 12:49:23
+Accuracy of pruned model: 84.16%
+Update optimal model
+Time log: 12:49:38
+Time log: 12:50:50
+===Generate importance score===
+Time log: 12:51:51
+Total filters: 1202
+Time log: 12:51:51
+Time log: 12:51:52
+torch.Size([32, 55, 7, 7])
+Time log: 12:51:52
+Time log: 12:51:52
+Time log: 12:51:52
+Epoch [1/1], Loss: 0.5354
+===Number of pruned filters is:  120
+Time log: 12:53:42
+
+===Fine-tune the model to achieve W_s*===
+Epoch 1/1
+Time log: 12:54:52
+Accuracy of pruned model: 86.42%
+Update optimal model
+Time log: 12:55:07
+Time log: 12:56:18
+===Generate importance score===
+Time log: 12:57:19
+Total filters: 1082
+Time log: 12:57:19
+Time log: 12:57:20
+torch.Size([32, 47, 7, 7])
+Time log: 12:57:20
+Time log: 12:57:20
+Time log: 12:57:20
+Epoch [1/1], Loss: 0.6065
+===Number of pruned filters is:  108
+Time log: 12:58:58
+
+===Fine-tune the model to achieve W_s*===
+Epoch 1/1
+Time log: 13:00:07
+Accuracy of pruned model: 85.85%
+Update optimal model
+Time log: 13:00:21
+Time log: 13:01:30
+===Generate importance score===
+Time log: 13:02:33
+Total filters: 974
+Time log: 13:02:33
+Time log: 13:02:34
+torch.Size([32, 44, 7, 7])
+Time log: 13:02:34
+Time log: 13:02:34
+Time log: 13:02:34
+Epoch [1/1], Loss: 0.6745
+===Number of pruned filters is:  97
+Time log: 13:04:08
+
+===Fine-tune the model to achieve W_s*===
+Epoch 1/1
+Time log: 13:05:17
+Accuracy of pruned model: 85.61%
+Update optimal model
+Time log: 13:05:31
+Time log: 13:06:41
+===Generate importance score===
+Time log: 13:07:43
+Total filters: 877
+Time log: 13:07:43
+Time log: 13:07:44
+torch.Size([32, 41, 7, 7])
+Time log: 13:07:44
+Time log: 13:07:44
+Time log: 13:07:44
+Epoch [1/1], Loss: 0.6854
+===Number of pruned filters is:  87
+Time log: 13:09:16
+
+===Fine-tune the model to achieve W_s*===
+Epoch 1/1
+Time log: 13:10:29
+Accuracy of pruned model: 84.34%
+Update optimal model
+Time log: 13:10:45
+Time log: 13:12:01
+===Generate importance score===
+Time log: 13:13:11
+Total filters: 790
+Time log: 13:13:11
+Time log: 13:13:12
+torch.Size([32, 38, 7, 7])
+Time log: 13:13:12
+Time log: 13:13:12
+Time log: 13:13:12
+Epoch [1/1], Loss: 0.8864
+===Number of pruned filters is:  79
+Time log: 13:14:50
+
+===Fine-tune the model to achieve W_s*===
+Epoch 1/1
+Time log: 13:16:06
+Accuracy of pruned model: 83.87%
+Optimization done!

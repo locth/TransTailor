@@ -18,7 +18,7 @@ IA_EPOCH = 1
 IA_LR = 0.005
 IA_MOMENTUM = 0.9
 
-PRUNING_AMOUNT = 5
+PRUNING_AMOUNT = 10
 
 def LoadModel(device):
     # Load the VGG16 model
@@ -97,7 +97,7 @@ if __name__ == "__main__":
     ROOT_DIR, CHECKPOINT_PATH, NUM_WORKER, BATCH_SIZE = LoadArguments()
     
     RESULT_PATH = os.path.join(ROOT_DIR, "optimal_model.pt")
-    SAVED_PATH = os.path.join(ROOT_DIR, "pruner", "checkpoint_{pruned_count}.pkl")
+    SAVED_PATH = os.path.join(ROOT_DIR, "checkpoint", "pruner", "checkpoint_{pruned_count}.pkl")
 
     # LOAD MODEL
     logger.info("GET DEVICE INFORMATION")
@@ -125,12 +125,13 @@ if __name__ == "__main__":
     opt_accuracy = CalculateAccuracy(pruner.model, test_loader)
     print(f"Accuracy of finetuned model: {opt_accuracy:.2f}%")
     logger.info(f"Accuracy of finetuned model: {opt_accuracy:.2f}%")
+    logger.info("===DONE EVALUATE===")
 
 
     # START PRUNING PROCESS
     while True:
         TimeLog()
-        pruner.TrainScalingFactors(ROOT_DIR, IA_EPOCH, IA_LR, IA_MOMENTUM)
+        pruner.TrainScalingFactors(IA_EPOCH, IA_LR, IA_MOMENTUM)
         
         TimeLog()
         pruner.GenerateImportanceScores()
@@ -160,14 +161,11 @@ if __name__ == "__main__":
         print(f"===Number of pruned filters is: ", sum_filters, flush=True)
         logger.info(f"===Number of pruned filters is: {sum_filters}")
 
-        # pruned_count = len(pruner.pruned_filters)
+        pruned_count = len(pruner.pruned_filters)
         
-        # if pruned_count % 10 == 0:
-        #     pruner.SaveState(SAVED_PATH.format(pruned_count = pruned_count))
+        if pruned_count % 5 == 0:
+            pruner.SaveState(SAVED_PATH.format(pruned_count = pruned_count))
         
-        
-
-
         TimeLog()
         pruner.Finetune(TA_EPOCH, TA_LR, TA_MOMENTUM, 0)
         
@@ -177,9 +175,7 @@ if __name__ == "__main__":
         print(f"Accuracy of pruned model: {pruned_accuracy:.2f}%")
         logger.info(f"Accuracy of pruned model: {pruned_accuracy:.2f}%")
         
-
-        
-        if abs(opt_accuracy - pruned_accuracy) > pruner.amount:
+        if abs(opt_accuracy - pruned_accuracy) > PRUNING_AMOUNT:
             print(f"Optimization done!", flush=True)
             torch.save(pruner.model.state_dict(), RESULT_PATH)
             break

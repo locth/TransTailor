@@ -33,7 +33,8 @@ class Pruner:
 
 
 
-    def TrainScalingFactors(self,num_epochs, learning_rate, momentum):
+    def TrainScalingFactors(self, num_epochs, learning_rate, momentum):
+        logger.info("===TRAIN SCALING FACTORS===")
         for param in self.model.parameters():
             param.requires_grad = False
 
@@ -48,6 +49,7 @@ class Pruner:
 
         params_to_optimize = itertools.chain(self.scaling_factors[sf] for sf in self.scaling_factors.keys())
         optimizer_alpha = torch.optim.SGD(params_to_optimize, lr=learning_rate, momentum=momentum)
+        logger.info("===TRAIN SCALING FACTORS, SETUP===")
 
         for epoch in range(num_epochs):
             iter_count = 0
