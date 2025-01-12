@@ -1,11 +1,16 @@
 import torch
 import torchvision
 import torchvision.transforms as transforms
+
+from sklearn.model_selection import train_test_split
+import matplotlib.pyplot as plt
+
 from Pruner import Pruner
 import argparse
 import os
 import logging
 import time
+
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -32,28 +37,39 @@ def LoadModel(device):
 
     return model
 
-def LoadData(numWorker, batchSize):
-    # Define the data transformation
+def LoadData(numWorker, batchSize, validation_split=0.1):
     transform = transforms.Compose([
         transforms.Resize((224, 224)),
         transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
 
     data_path = os.path.join(ROOT_DIR, "data")
 
-    # Load the CIFAR10 train_dataset
-    train_dataset = torchvision.datasets.CIFAR10(root=data_path, train=True, download=True, transform=transform)
+    # Load CIFAR10 dataset
+    full_train_dataset = torchvision.datasets.CIFAR10(
+        root=data_path, train=True, download=True, transform=transform
+    )
 
-    kwargs = {'num_workers': numWorker, 'pin_memory': True} if device == 'cuda' else {}
+    # Split train into train and validate
+    train_indices, val_indices = train_test_split(
+        range(len(full_train_dataset)), test_size=validation_split, random_state=42
+    )
+
+    train_dataset = torch.utils.data.Subset(full_train_dataset, train_indices)
+    val_dataset = torch.utils.data.Subset(full_train_dataset, val_indices)
+
+    test_dataset = torchvision.datasets.CIFAR10(
+        root=data_path, train=False, download=True, transform=transform
+    )
+
+    kwargs = {"num_workers": numWorker, "pin_memory": True} if device == "cuda" else {}
+
     train_loader = torch.utils.data.DataLoader(train_dataset, batchSize, shuffle=True, **kwargs)
-
-    # Load test_dataset
-    test_dataset = torchvision.datasets.CIFAR10(root=data_path, train=False, download=True, transform=transform)
-
+    val_loader = torch.utils.data.DataLoader(val_dataset, batchSize, shuffle=False, **kwargs)
     test_loader = torch.utils.data.DataLoader(test_dataset, batchSize, shuffle=False, **kwargs)
 
-    return train_loader, test_loader
+    return train_loader, val_loader, test_loader
 
 def LoadArguments():
     parser = argparse.ArgumentParser(description="Config cli params")

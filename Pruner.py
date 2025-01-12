@@ -312,7 +312,10 @@ class Pruner:
         self.model.train()
         optimizer = optim.SGD(self.model.parameters(), lr=learning_rate, momentum=momentum)
         criterion = nn.CrossEntropyLoss()
-
+        
+        train_losses = []
+        val_losses = []
+        
         for epoch in range(num_epochs):
             total_loss = 0
             for inputs, labels in self.train_loader:
