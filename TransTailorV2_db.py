@@ -23,7 +23,7 @@ IA_EPOCH = 1
 IA_LR = 0.005
 IA_MOMENTUM = 0.9
 
-PRUNING_AMOUNT = 10
+PRUNING_AMOUNT = 5
 
 def LoadModel(device):
     # Load the VGG16 model
