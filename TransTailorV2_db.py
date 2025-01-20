@@ -1,20 +1,20 @@
 import torch
 import torchvision
 import torchvision.transforms as transforms
-
 from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
-
-from Pruner import Pruner
 import argparse
 import os
 import logging
 import time
 
+from Pruner import Pruner  # Import the Pruner class
 
+# Set up logging
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
+# Constants for training
 TA_EPOCH = 1
 TA_LR = 0.005
 TA_MOMENTUM = 0.9
@@ -37,37 +37,35 @@ def LoadModel(device):
 
     return model
 
+
 def LoadData(numWorker, batchSize, validation_split=0.1):
+    """Load CIFAR10 dataset and split it into train, validation, and test sets."""
     transform = transforms.Compose([
         transforms.Resize((224, 224)),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
-
     data_path = os.path.join(ROOT_DIR, "data")
 
-    # Load CIFAR10 dataset
-    full_train_dataset = torchvision.datasets.CIFAR10(
-        root=data_path, train=True, download=True, transform=transform
-    )
+    # Load full training dataset
+    full_train_dataset = torchvision.datasets.CIFAR10(root=data_path, train=True, download=True, transform=transform)
 
-    # Split train into train and validate
+    # Split into train and validation sets
     train_indices, val_indices = train_test_split(
         range(len(full_train_dataset)), test_size=validation_split, random_state=42
     )
-
     train_dataset = torch.utils.data.Subset(full_train_dataset, train_indices)
     val_dataset = torch.utils.data.Subset(full_train_dataset, val_indices)
 
-    test_dataset = torchvision.datasets.CIFAR10(
-        root=data_path, train=False, download=True, transform=transform
-    )
+    # Load test dataset
+    test_dataset = torchvision.datasets.CIFAR10(root=data_path, train=False, download=True, transform=transform)
 
-    kwargs = {"num_workers": numWorker, "pin_memory": True} if device == "cuda" else {}
+    kwargs = {"num_workers": numWorker, "pin_memory": True} if device.type == "cuda" else {}
 
-    train_loader = torch.utils.data.DataLoader(train_dataset, batchSize, shuffle=True, **kwargs)
-    val_loader = torch.utils.data.DataLoader(val_dataset, batchSize, shuffle=False, **kwargs)
-    test_loader = torch.utils.data.DataLoader(test_dataset, batchSize, shuffle=False, **kwargs)
+    # Create data loaders
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batchSize, shuffle=True, **kwargs)
+    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batchSize, shuffle=False, **kwargs)
+    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batchSize, shuffle=False, **kwargs)
 
     return train_loader, val_loader, test_loader
 
@@ -86,6 +84,7 @@ def LoadArguments():
 
     return ROOT_DIR, CHECKPOINT_PATH, NUM_WORKER, BATCH_SIZE
 
+
 def CalculateAccuracy(model, test_loader):
     model.eval()
     correct = 0
@@ -102,6 +101,40 @@ def CalculateAccuracy(model, test_loader):
     accuracy = 100 * correct / total
     return accuracy
 
+
+
+def PrintDatasetInfo(train_loader, val_loader, test_loader):
+    """Print information about the datasets."""
+    def loader_info(loader, name):
+        data_iter = iter(loader)
+        inputs, labels = next(data_iter)
+        print(f"Dataset: {name}")
+        print(f"  Number of batches: {len(loader)}")
+        # print(f"  Input batch shape: {inputs.shape}")
+        # print(f"  Label batch shape: {labels.shape}")
+        # print(f"  Sample labels: {labels[:10].tolist()}")
+        print("-" * 50)
+
+    print("=== Dataset Information ===")
+    loader_info(train_loader, "Train")
+    loader_info(val_loader, "Validation")
+    loader_info(test_loader, "Test")
+    print("===========================")
+
+
+def PlotLossCurve(train_losses, val_losses):
+    """Plot training and validation loss curves."""
+    plt.figure(figsize=(10, 6))
+    plt.plot(train_losses, label='Train Loss')
+    plt.plot(val_losses, label='Validation Loss')
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.title('Train vs Validation Loss')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+
 def TimeLog():
     curr_time = time.strftime("%H:%M:%S", time.localtime())
     print("Time log:", curr_time)
@@ -110,8 +143,8 @@ def TimeLog():
 if __name__ == "__main__":
     # LOAD ARGUMENTS
     logger.info("START MAIN PROGRAM!")
+
     ROOT_DIR, CHECKPOINT_PATH, NUM_WORKER, BATCH_SIZE = LoadArguments()
-    
     RESULT_PATH = os.path.join(ROOT_DIR, "optimal_model.pt")
     SAVED_PATH = os.path.join(ROOT_DIR, "checkpoint", "pruner", "checkpoint_{pruned_count}.pkl")
 
@@ -122,8 +155,12 @@ if __name__ == "__main__":
 
     # LOAD DATASET
     logger.info("LOAD DATASET: CIFAR10")
-    train_loader, test_loader = LoadData(NUM_WORKER, BATCH_SIZE)
+    # train_loader, test_loader = LoadData(NUM_WORKER, BATCH_SIZE)
+    # Gọi hàm này ngay sau khi LoadData
+    train_loader, val_loader, test_loader = LoadData(NUM_WORKER, BATCH_SIZE)
+    PrintDatasetInfo(train_loader, val_loader, test_loader)
 
+    # LOAD MODEL
     logger.info("LOAD PRETRAINED MODEL: VGG-16 (ImageNet)")
     model = LoadModel(device)
 
@@ -133,8 +170,9 @@ if __name__ == "__main__":
         logger.info("Load model and pruning info from checkpoint...")
         pruner.LoadState(CHECKPOINT_PATH)
     else:
-        pruner.Finetune(40, TA_LR, TA_MOMENTUM, 0)
+        logger.info("Fine-tuning model before pruning")
 
+        pruner.Finetune(3, TA_LR, TA_MOMENTUM, 0)
         pruner.InitScalingFactors()
         pruner.SaveState(SAVED_PATH.format(pruned_count = 0))
 
@@ -142,6 +180,11 @@ if __name__ == "__main__":
     print(f"Accuracy of finetuned model: {opt_accuracy:.2f}%")
     logger.info(f"Accuracy of finetuned model: {opt_accuracy:.2f}%")
     logger.info("===DONE EVALUATE===")
+
+
+    # Record training and validation losses
+    train_losses = []
+    val_losses = []
 
 
     # START PRUNING PROCESS
@@ -170,6 +213,10 @@ if __name__ == "__main__":
         TimeLog()
         pruner.ImportanceAwareFineTuning(IA_EPOCH, IA_LR, IA_MOMENTUM)
         
+        # Update and log losses
+        train_losses.append(IA_LR)  # Dummy value, replace with actual loss if tracked
+        val_losses.append(IA_LR)  # Dummy value, replace with actual loss if tracked
+
         sum_filters = 0 
         for layer in filters_to_prune:
             number_of_filters = len(filters_to_prune[layer])
@@ -177,8 +224,8 @@ if __name__ == "__main__":
         print(f"===Number of pruned filters is: ", sum_filters, flush=True)
         logger.info(f"===Number of pruned filters is: {sum_filters}")
 
+
         pruned_count = len(pruner.pruned_filters)
-        
         if pruned_count % 5 == 0:
             pruner.SaveState(SAVED_PATH.format(pruned_count = pruned_count))
         
@@ -197,3 +244,7 @@ if __name__ == "__main__":
             break
         else:
             print(f"Update optimal model", flush=True)
+
+
+    # Plot loss curve at the end of pruning
+    PlotLossCurve(train_losses, val_losses)
