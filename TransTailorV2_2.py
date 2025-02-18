@@ -11,15 +11,18 @@ import matplotlib.pyplot as plt
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
-TA_EPOCH = 1
+TEST_NAME = "TA5_IA10_DROP5"
+
+TA_EPOCH = 5
 TA_LR = 0.005
 TA_MOMENTUM = 0.9
 
-IA_EPOCH = 1
+IA_EPOCH = 10
 IA_LR = 0.005
 IA_MOMENTUM = 0.9
 
-PRUNING_AMOUNT = 10
+ACC_DROP = 5
+PRUNING_PERCENTAGE = 5  # The percentage of least important filters that need to be pruned
 
 
 def LoadModel(device):
@@ -101,7 +104,8 @@ def PlotLoss(train_loss, validate_loss):
     plt.legend()
     plt.title("Training and Validation Loss")
     plt.grid(True)
-    plt.show()
+    # plt.show()
+    plt.savefig("Plot.png")
 
 def TimeLog():
     curr_time = time.strftime("%H:%M:%S", time.localtime())
@@ -112,8 +116,8 @@ if __name__ == "__main__":
     logger.info("START MAIN PROGRAM!")
     ROOT_DIR, CHECKPOINT_PATH, NUM_WORKER, BATCH_SIZE = LoadArguments()
 
-    RESULT_PATH = os.path.join(ROOT_DIR, "optimal_model.pt")
-    SAVED_PATH = os.path.join(ROOT_DIR, "checkpoint", "pruner", "checkpoint_{pruned_count}.pkl")
+    RESULT_PATH = os.path.join(ROOT_DIR, "checkpoint", "optimal", TEST_NAME + "_optimal_model.pt")
+    SAVED_PATH = os.path.join(ROOT_DIR, "checkpoint", "pruner", TEST_NAME + "_checkpoint_{pruned_count}.pkl")
 
     # LOAD MODEL
     logger.info("GET DEVICE INFORMATION")
@@ -161,7 +165,7 @@ if __name__ == "__main__":
         pruner.GenerateImportanceScores()
 
         TimeLog()
-        filters_to_prune = pruner.FindFiltersToPrune(PRUNING_AMOUNT)
+        filters_to_prune = pruner.FindFiltersToPrune(PRUNING_PERCENTAGE)
 
         TimeLog()
         pruner.PruneAndRestructure(filters_to_prune)
@@ -199,7 +203,7 @@ if __name__ == "__main__":
         print(f"Accuracy of pruned model: {pruned_accuracy:.2f}%")
         logger.info(f"Accuracy of pruned model: {pruned_accuracy:.2f}%")
 
-        if abs(opt_accuracy - pruned_accuracy) > PRUNING_AMOUNT:
+        if abs(opt_accuracy - pruned_accuracy) > ACC_DROP:
             print(f"Optimization done!", flush=True)
             torch.save(pruner.model.state_dict(), RESULT_PATH)
             break
