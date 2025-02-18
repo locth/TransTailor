@@ -102,6 +102,22 @@ def CalculateAccuracy(model, test_loader):
     return accuracy
 
 
+def ComputeValidationLoss(model, val_loader, device):
+    model.eval()
+    criterion = torch.nn.CrossEntropyLoss()
+    total_loss = 0
+    batch_count = 0
+    
+    with torch.no_grad():
+        for inputs, labels in val_loader:
+            inputs, labels = inputs.to(device), labels.to(device)
+            outputs = model(inputs)
+            loss = criterion(outputs, labels)
+            total_loss += loss.item()
+            batch_count += 1
+    
+    return total_loss / batch_count if batch_count > 0 else 0
+
 
 def PrintDatasetInfo(train_loader, val_loader, test_loader):
     """Print information about the datasets."""
@@ -127,11 +143,12 @@ def PlotLossCurve(train_losses, val_losses):
     plt.figure(figsize=(10, 6))
     plt.plot(train_losses, label='Train Loss')
     plt.plot(val_losses, label='Validation Loss')
-    plt.xlabel('Epochs')
+    plt.xlabel('Pruning Iterations')
     plt.ylabel('Loss')
-    plt.title('Train vs Validation Loss')
+    plt.title('Train vs Validation Loss During Pruning')
     plt.legend()
     plt.grid(True)
+    plt.savefig('loss_curve.png')  # Save the plot to a file
     plt.show()
 
 
@@ -172,7 +189,7 @@ if __name__ == "__main__":
     else:
         logger.info("Fine-tuning model before pruning")
 
-        pruner.Finetune(3, TA_LR, TA_MOMENTUM, 0)
+        ft_loss = pruner.Finetune(3, TA_LR, TA_MOMENTUM, 0)
         pruner.InitScalingFactors()
         pruner.SaveState(SAVED_PATH.format(pruned_count = 0))
 
@@ -211,12 +228,11 @@ if __name__ == "__main__":
         pruner.PruneImportanceScore(filters_to_prune)
         
         TimeLog()
-        pruner.ImportanceAwareFineTuning(IA_EPOCH, IA_LR, IA_MOMENTUM)
+        ia_loss = pruner.ImportanceAwareFineTuning(IA_EPOCH, IA_LR, IA_MOMENTUM)
         
-        # Update and log losses
-        train_losses.append(IA_LR)  # Dummy value, replace with actual loss if tracked
-        val_losses.append(IA_LR)  # Dummy value, replace with actual loss if tracked
-
+        # Update and log actual losses
+        train_losses.append(ia_loss)
+        
         sum_filters = 0 
         for layer in filters_to_prune:
             number_of_filters = len(filters_to_prune[layer])
@@ -230,13 +246,19 @@ if __name__ == "__main__":
             pruner.SaveState(SAVED_PATH.format(pruned_count = pruned_count))
         
         TimeLog()
-        pruner.Finetune(TA_EPOCH, TA_LR, TA_MOMENTUM, 0)
+        ft_loss = pruner.Finetune(TA_EPOCH, TA_LR, TA_MOMENTUM, 0)
+        
+        # Compute validation loss
+        val_loss = ComputeValidationLoss(pruner.model, val_loader, device)
+        val_losses.append(val_loss)
         
         TimeLog()
         pruned_accuracy = CalculateAccuracy(pruner.model, test_loader)
         
         print(f"Accuracy of pruned model: {pruned_accuracy:.2f}%")
         logger.info(f"Accuracy of pruned model: {pruned_accuracy:.2f}%")
+        print(f"Training loss: {ia_loss:.4f}, Validation loss: {val_loss:.4f}")
+        logger.info(f"Training loss: {ia_loss:.4f}, Validation loss: {val_loss:.4f}")
         
         if abs(opt_accuracy - pruned_accuracy) > PRUNING_AMOUNT:
             print(f"Optimization done!", flush=True)

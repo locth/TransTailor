@@ -313,8 +313,7 @@ class Pruner:
         optimizer = optim.SGD(self.model.parameters(), lr=learning_rate, momentum=momentum)
         criterion = nn.CrossEntropyLoss()
         
-        train_losses = []
-        val_losses = []
+        epoch_loss = 0
         
         for epoch in range(num_epochs):
             total_loss = 0
@@ -356,18 +355,24 @@ class Pruner:
 
                 total_loss += loss.item()
 
-            print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {total_loss / len(self.train_loader):.4f}")
-
-
+            epoch_loss = total_loss / len(self.train_loader)
+            print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss:.4f}")
+        
+        return epoch_loss
+    
     def Finetune(self, num_epochs, learning_rate, momentum, checkpoint_epoch):
         print("\n===Fine-tune the model to achieve W_s*===")
         optimizer = torch.optim.SGD(self.model.parameters(), lr=learning_rate, momentum=momentum)
         criterion = torch.nn.CrossEntropyLoss()
 
         epoch = checkpoint_epoch
-
+        epoch_loss = 0
+        
         for epoch in range(epoch, num_epochs):
             print("Epoch " + str(epoch + 1) + "/" + str(num_epochs))
+            total_loss = 0
+            batch_count = 0
+            
             for inputs, labels in self.train_loader:
                 inputs, labels = inputs.to(self.device), labels.to(self.device)
                 optimizer.zero_grad()
@@ -375,6 +380,13 @@ class Pruner:
                 loss = criterion(outputs, labels)
                 loss.backward()
                 optimizer.step()
+                total_loss += loss.item()
+                batch_count += 1
+                
+            epoch_loss = total_loss / batch_count
+            print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss:.4f}")
+        
+        return epoch_loss
 
     def SaveState(self, path):
         """
