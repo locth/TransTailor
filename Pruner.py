@@ -10,18 +10,24 @@ import pickle
 import os
 import logging
 
+import matplotlib.pyplot as plt
+
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 class Pruner:
-    def __init__(self, model, train_loader, device, scaling_factors={}, importance_scores={}, pruned_filters=set()):
+    def __init__(self, model, train_loader, val_loader, test_loader, device, train_losses=[], val_losses=[], scaling_factors={}, importance_scores={}, pruned_filters=set()):
         self.model = model
         self.train_loader = train_loader
+        self.val_loader = val_loader
+        self.test_loader = test_loader
         self.device = device
         self.scaling_factors = scaling_factors
         self.importance_scores = importance_scores
         self.pruned_filters = pruned_filters
+        self.train_losses = train_losses
+        self.val_losses = val_losses
 
 
     def InitScalingFactors(self):
@@ -361,6 +367,15 @@ class Pruner:
         return epoch_loss
     
     def Finetune(self, num_epochs, learning_rate, momentum, checkpoint_epoch):
+        """
+        Fine-tune the model to achieve W_s*
+        
+        Args:
+            num_epochs (int): Number of training epochs
+            learning_rate (float): Learning rate
+            momentum (float): Momentum value
+            checkpoint_epoch (int): Epoch to resume from
+        """
         print("\n===Fine-tune the model to achieve W_s*===")
         optimizer = torch.optim.SGD(self.model.parameters(), lr=learning_rate, momentum=momentum)
         criterion = torch.nn.CrossEntropyLoss()
@@ -370,9 +385,10 @@ class Pruner:
         
         for epoch in range(epoch, num_epochs):
             print("Epoch " + str(epoch + 1) + "/" + str(num_epochs))
-            total_loss = 0
-            batch_count = 0
             
+            # Training phase
+            self.model.train()
+            running_loss = 0.0
             for inputs, labels in self.train_loader:
                 inputs, labels = inputs.to(self.device), labels.to(self.device)
                 optimizer.zero_grad()
@@ -380,13 +396,31 @@ class Pruner:
                 loss = criterion(outputs, labels)
                 loss.backward()
                 optimizer.step()
-                total_loss += loss.item()
-                batch_count += 1
-                
-            epoch_loss = total_loss / batch_count
-            print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss:.4f}")
-        
-        return epoch_loss
+                running_loss += loss.item()
+            
+            # Calculate average training loss for the epoch
+            train_loss = running_loss / len(self.train_loader)
+            self.train_losses.append(train_loss)
+
+            # Validation phase
+            self.model.eval()
+            val_loss = 0.0
+            with torch.no_grad():
+                for inputs, labels in self.val_loader:
+                    inputs, labels = inputs.to(self.device), labels.to(self.device)
+                    outputs = self.model(inputs)
+                    loss = criterion(outputs, labels)
+                    val_loss += loss.item()
+            
+            # Calculate average validation loss for the epoch
+            val_loss = val_loss / len(self.val_loader)
+            self.val_losses.append(val_loss)
+
+            print(f"Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}")
+
+        # # Save loss plot if path is provided
+        # if plot_save_path is not None:
+        #     self.PlotLosses(train_losses, val_losses, plot_save_path)
 
     def SaveState(self, path):
         """
@@ -418,4 +452,27 @@ class Pruner:
         self.scaling_factors = state['scaling_factors']
         self.importance_scores = state['importance_scores']
         self.pruned_filters = state['pruned_filters']
-        
+        self.train_loader = state['train_loader']
+        self.val_loader = state['val_loader']
+        self.test_loader = state['test_loader']
+        self.train_losses = state['train_losses']
+        self.val_losses = state['val_losses']
+
+    def PlotLosses(self, train_losses, val_losses, save_path):
+        """
+        Plot and save training and validation loss curves.
+
+        Args:
+            train_losses (list): List of training losses
+            val_losses (list): List of validation losses
+            save_path (str): Path to save the plot
+        """
+        plt.figure()
+        plt.plot(train_losses, label='Train Loss')
+        plt.plot(val_losses, label='Validation Loss')
+        plt.xlabel('Epoch')
+        plt.ylabel('Loss')
+        plt.title('Training and Validation Loss')
+        plt.legend()
+        plt.savefig(save_path)
+        plt.close()
