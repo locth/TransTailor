@@ -433,7 +433,9 @@ class Pruner:
             'model': self.model,
             'scaling_factors': self.scaling_factors,
             'importance_scores': self.importance_scores,
-            'pruned_filters': self.pruned_filters
+            'pruned_filters': self.pruned_filters,
+            'train_losses': self.train_losses,
+            'val_losses': self.val_losses
         }
         with open(path, 'wb') as f:
             pickle.dump(state, f)
@@ -452,9 +454,9 @@ class Pruner:
         self.scaling_factors = state['scaling_factors']
         self.importance_scores = state['importance_scores']
         self.pruned_filters = state['pruned_filters']
-        self.train_loader = state['train_loader']
-        self.val_loader = state['val_loader']
-        self.test_loader = state['test_loader']
+        # self.train_loader = state['train_loader']
+        # self.val_loader = state['val_loader']
+        # self.test_loader = state['test_loader']
         self.train_losses = state['train_losses']
         self.val_losses = state['val_losses']
 

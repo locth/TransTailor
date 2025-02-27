@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
-TEST_NAME = "TA5_IA10_DROP5"
+TEST_NAME = "TA5_IA10_DROP5_v3"
 
 TA_EPOCH = 5
 TA_LR = 0.005
@@ -106,6 +106,7 @@ if __name__ == "__main__":
 
     RESULT_PATH = os.path.join(ROOT_DIR, "checkpoint", "optimal", TEST_NAME + "_optimal_model.pt")
     SAVED_PATH = os.path.join(ROOT_DIR, "checkpoint", "pruner", TEST_NAME + "_checkpoint_{pruned_count}.pkl")
+    FIG_PATH = os.path.join(ROOT_DIR, "train_log", TEST_NAME + ".png")
 
     # LOAD MODEL
     logger.info("GET DEVICE INFORMATION")
@@ -188,4 +189,4 @@ if __name__ == "__main__":
             break
         else:
             print(f"Update optimal model", flush=True)
-            pruner.PlotLosses(pruner.train_loss, pruner.val_losses)
+            pruner.PlotLosses(pruner.train_losses, pruner.val_losses, FIG_PATH)
